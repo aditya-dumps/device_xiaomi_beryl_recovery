@@ -141,8 +141,9 @@ PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/vendor_ramdisk/product_property_contexts:$(TARGET_COPY_OUT_VENDOR_RAMDISK)/product_property_contexts \
     $(LOCAL_PATH)/vendor_ramdisk/product_service_contexts:$(TARGET_COPY_OUT_VENDOR_RAMDISK)/product_service_contexts
 
-# Copy stock kernel modules to vendor_ramdisk (required for UFS storage, display, USB)
-PRODUCT_COPY_FILES += $(call find-copy-subdir-files,*,$(LOCAL_PATH)/vendor_ramdisk/lib,$(TARGET_COPY_OUT_VENDOR_RAMDISK)/lib)
+# Timezone data for Bionic libc
+PRODUCT_COPY_FILES += \
+    system/timezone/output_data/iana/tzdata:$(TARGET_COPY_OUT_RECOVERY)/root/system/usr/share/zoneinfo/tzdata
 
 
 # honestly! fuck this vintf 9.0 issue!!!

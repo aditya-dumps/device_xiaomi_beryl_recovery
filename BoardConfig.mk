@@ -14,6 +14,7 @@ BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true
 BUILD_BROKEN_PREBUILT_ELF_FILES := true
 BUILD_BROKEN_MISSING_REQUIRED_MODULES := true
 SOONG_ALLOW_MISSING_DEPENDENCIES := true
+-include bootable/recovery/orangefox_soong.mk
 
 # Architecture
 TARGET_ARCH := arm64
@@ -66,7 +67,7 @@ BOARD_HEADER_SIZE             := 2128
 BOARD_KERNEL_OFFSET           := 0x40000000
 BOARD_RAMDISK_OFFSET          := 0x66f00000
 BOARD_TAGS_OFFSET             := 0x47c80000
-BOARD_DTB_OFFSET              := 0x47c80000
+BOARD_DTB_OFFSET              := 0x41ef8000
 BOARD_DTB_SIZE                := 266395
 TARGET_KERNEL_ARCH            := arm64
 TARGET_KERNEL_HEADER_ARCH     := arm64
@@ -199,20 +200,20 @@ RECOVERY_SDCARD_ON_DATA := true
 TW_FRAMERATE := 60
 TW_THEME := portrait_hdpi
 TW_EXTRA_LANGUAGES := false
-TW_SCREEN_BLANK_ON_BOOT := true
+TW_SCREEN_BLANK_ON_BOOT := false
 TW_INPUT_BLACKLIST := "hbtp_vm"
-TW_INCLUDE_REPACKTOOLS := true
+TW_INCLUDE_REPACKTOOLS := false
 TW_EXCLUDE_APEX := true
 TW_EXCLUDE_PYTHON := true
 TW_EXCLUDE_TWRPAPP := true
 TARGET_USES_MKE2FS := true
-TW_INCLUDE_NTFS_3G := true
+TW_INCLUDE_NTFS_3G := false
 TW_USE_TOOLBOX := true
 TW_INCLUDE_RESETPROP := true
 
 # Debug flags
-TWRP_INCLUDE_LOGCAT := true
-TARGET_USES_LOGD := true
+TWRP_INCLUDE_LOGCAT := false
+TARGET_USES_LOGD := false
 
 # Vendor_Boot
 BOARD_USES_RECOVERY_AS_BOOT :=
@@ -227,9 +228,13 @@ TW_DEFAULT_BRIGHTNESS := 400
 TW_MAX_BRIGHTNESS := 2047
 TW_BRIGHTNESS_PATH := "/sys/class/leds/lcd-backlight/brightness"
 
+# Battery & CPU Temp
+TW_CUSTOM_BATTERY_PATH := "/sys/class/power_supply/battery"
+TW_CUSTOM_CPU_TEMP_PATH := "/sys/class/thermal/thermal_zone9/temp"
+
 # Haptics
 TW_NO_HAPTICS := true
 
 TW_USE_SERIALNO_PROPERTY_FOR_DEVICE_ID := true
-TW_LOAD_VENDOR_MODULES := "fts_touch_i2c.ko lct_tp.ko xiaomi_tp.ko xiaomi_fp.ko adsp.ko nfc_i2c.ko"
+TW_LOAD_VENDOR_MODULES := "fts_touch_i2c.ko lct_tp.ko xiaomi_tp.ko xiaomi_fp.ko adsp.ko nfc_i2c.ko mtk_battery_manager.ko mt6375-battery.ko auth_battery.ko charger_class.ko mtk_charger_framework.ko"
 TW_LOAD_VENDOR_MODULES_EXCLUDE_GKI := true

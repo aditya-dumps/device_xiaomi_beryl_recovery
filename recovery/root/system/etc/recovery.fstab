@@ -26,18 +26,6 @@ system_dlkm                                             /system_dlkm           e
 # Misc
 /dev/block/by-name/rescue                               /cache                 ext4    noatime,nosuid,nodev,noauto_da_alloc,discard  wait,check,formattable
 
-# --- Secure storage / calibration (backup-only, never wipeable or flashable) ---
-# NOTE: mount points renamed to *_bak — prepdecrypt.sh mounts the real block
-# devices at /mnt/vendor/protect_f etc. before TWRP's PartitionManager runs,
-# so reusing those paths here causes "Unable to find partition" (mount collision).
-# Same underlying block device either way, so backup content is unaffected.
-
-/dev/block/by-name/protect1               /mnt/vendor/protect_f_bak  ext4  noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc  wait,check,formattable
-/dev/block/by-name/protect2               /mnt/vendor/protect_s_bak  ext4  noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc  wait,check,formattable
-/dev/block/by-name/nvdata                 /mnt/vendor/nvdata_bak     ext4  noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc  wait,check,formattable
-/dev/block/by-name/nvcfg                  /mnt/vendor/nvcfg_bak      ext4  noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc  wait,check,formattable
-/dev/block/by-name/persist                /mnt/vendor/persist        ext4  noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc  wait,check,formattable
-
 # --- Boot-chain (backup + flashable, wipeable only under advanced wipe) ---
 /dev/block/by-name/boot                                 /boot                  emmc    defaults                                                                      defaults,slotselect
 /dev/block/by-name/vendor_boot                          /vendor_boot           emmc    defaults                                                                      defaults,slotselect

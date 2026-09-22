@@ -6,6 +6,11 @@ ro.postinstall.fstab.prefix=/system
 
 # USB MTP
 ro.sys.usb.storage.type=mtp
+ro.recovery.usb.vid=18D1
+ro.recovery.usb.adb.pid=D001
+ro.recovery.usb.fastboot.pid=4EE0
+ro.recovery.usb.mtp.pid=4EE1
+ro.recovery.usb.mtpadb.pid=4EE2
 
 # Crypto
 ro.crypto.volume.filenames_mode=aes-256-cts

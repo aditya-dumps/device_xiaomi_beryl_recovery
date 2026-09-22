@@ -6,6 +6,7 @@ service insmod_touch_sh /vendor/bin/init.insmod.sh /vendor/etc/init.insmod.touch
     group root system
     disabled
     oneshot
+    seclabel u:r:recovery:s0
 
 on init
     start insmod_touch_sh

@@ -1,4 +1,4 @@
-#!/sbin/sh
+#!/system/bin/sh
 
 # 1. Create a temporary mount point
 mkdir -p /mnt/vendor

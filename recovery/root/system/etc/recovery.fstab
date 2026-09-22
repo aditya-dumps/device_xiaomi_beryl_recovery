@@ -32,22 +32,22 @@ system_dlkm                                             /system_dlkm           e
 # so reusing those paths here causes "Unable to find partition" (mount collision).
 # Same underlying block device either way, so backup content is unaffected.
 
-/dev/block/by-name/protect1               /mnt/vendor/protect_f_bak  ext4  noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc  wait,check,formattable,flags=display="Protect_F";backup=1;canbewiped=0
-/dev/block/by-name/protect2               /mnt/vendor/protect_s_bak  ext4  noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc  wait,check,formattable,flags=display="Protect_S";backup=1;canbewiped=0
-/dev/block/by-name/nvdata                 /mnt/vendor/nvdata_bak     ext4  noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc  wait,check,formattable,flags=display="NVData (IMEI/Calibration)";backup=1;canbewiped=0
-/dev/block/by-name/nvcfg                  /mnt/vendor/nvcfg_bak      ext4  noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc  wait,check,formattable,flags=display="NVCfg";backup=1;canbewiped=0
-/dev/block/by-name/persist                /mnt/vendor/persist        ext4  noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc  wait,check,formattable,flags=display="Persist";backup=1;canbewiped=0
+/dev/block/by-name/protect1               /mnt/vendor/protect_f_bak  ext4  noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc  wait,check,formattable
+/dev/block/by-name/protect2               /mnt/vendor/protect_s_bak  ext4  noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc  wait,check,formattable
+/dev/block/by-name/nvdata                 /mnt/vendor/nvdata_bak     ext4  noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc  wait,check,formattable
+/dev/block/by-name/nvcfg                  /mnt/vendor/nvcfg_bak      ext4  noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc  wait,check,formattable
+/dev/block/by-name/persist                /mnt/vendor/persist        ext4  noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc  wait,check,formattable
 
 # --- Boot-chain (backup + flashable, wipeable only under advanced wipe) ---
-/dev/block/by-name/boot                                 /boot                  emmc    defaults                                                                      defaults,slotselect,flags=display="Boot";backup=1;flashimg=1;wipeingui
-/dev/block/by-name/vendor_boot                          /vendor_boot           emmc    defaults                                                                      defaults,slotselect,flags=display="Vendor boot";backup=1;flashimg=1;wipeingui
-/dev/block/by-name/dtbo                                 /dtbo                  emmc    defaults                                                                      defaults,slotselect,flags=display="DTBO";backup=1;flashimg=1;wipeingui
-/dev/block/by-name/init_boot                            /init_boot             emmc    defaults                                                                      defaults,slotselect,flags=display="Init Boot";backup=1;flashimg=1;wipeingui
+/dev/block/by-name/boot                                 /boot                  emmc    defaults                                                                      defaults,slotselect
+/dev/block/by-name/vendor_boot                          /vendor_boot           emmc    defaults                                                                      defaults,slotselect
+/dev/block/by-name/dtbo                                 /dtbo                  emmc    defaults                                                                      defaults,slotselect
+/dev/block/by-name/init_boot                            /init_boot             emmc    defaults                                                                      defaults,slotselect
 
 # --- AVB / vbmeta family (backup + flashable, no wipe — empty vbmeta can hard-brick) ---
-/dev/block/by-name/vbmeta                 /vbmeta         emmc defaults                                                              defaults,slotselect,flags=display="Vbmeta";backup=1;flashimg=1
-/dev/block/by-name/vbmeta_system          /vbmeta_system  emmc defaults                                                              defaults,slotselect,flags=display="Vbmeta System";backup=1;flashimg=1
-/dev/block/by-name/vbmeta_vendor          /vbmeta_vendor  emmc defaults                                                              defaults,slotselect,flags=display="Vbmeta Vendor";backup=1;flashimg=1
+/dev/block/by-name/vbmeta                 /vbmeta         emmc defaults                                                              defaults,slotselect
+/dev/block/by-name/vbmeta_system          /vbmeta_system  emmc defaults                                                              defaults,slotselect
+/dev/block/by-name/vbmeta_vendor          /vbmeta_vendor  emmc defaults                                                              defaults,slotselect
 
 # SD card
 /devices/platform/soc/11240000.mmc*       auto          auto   defaults                                                              voldmanaged=sdcard1:auto

@@ -21,8 +21,16 @@ on init
     copy /vendor/lib64/libpuresoftkeymasterdevice.so /system/lib64/libpuresoftkeymasterdevice.so
     copy /vendor/lib64/libsoft_attestation_cert.so /system/lib64/libsoft_attestation_cert.so
 
+on early-fs
+    exec u:r:update_engine:s0 root root -- /system/bin/mtk_plpath_utils
+    start vold
+    start servicemanager
+    start hwservicemanager
 
 on fs
+    setprop sys.usb.config adb
+    start adbd
+
     chmod 0660 /dev/block/sdc1
     chown root system /dev/block/sdc1
 
@@ -33,11 +41,12 @@ on fs
     mkdir /mnt/vendor/nvcfg 0771 system system
     mkdir /mnt/vendor/persist 0755 root root
 
-    mount ext4 /dev/block/by-name/protect1 /mnt/vendor/protect_f noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait
-    mount ext4 /dev/block/by-name/protect2 /mnt/vendor/protect_s noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait
-    mount ext4 /dev/block/by-name/nvdata /mnt/vendor/nvdata noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait
-    mount ext4 /dev/block/by-name/nvcfg /mnt/vendor/nvcfg noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait
-    mount ext4 /dev/block/by-name/persist /mnt/vendor/persist noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait
+    wait /dev/block/by-name/protect1 3
+    mount ext4 /dev/block/by-name/protect1 /mnt/vendor/protect_f noatime nosuid nodev wait
+    mount ext4 /dev/block/by-name/protect2 /mnt/vendor/protect_s noatime nosuid nodev wait
+    mount ext4 /dev/block/by-name/nvdata /mnt/vendor/nvdata noatime nosuid nodev wait
+    mount ext4 /dev/block/by-name/nvcfg /mnt/vendor/nvcfg noatime nosuid nodev wait
+    mount ext4 /dev/block/by-name/persist /mnt/vendor/persist noatime nosuid nodev wait
 
     restorecon_recursive /metadata
     restorecon_recursive /mnt/vendor/persist
@@ -48,18 +57,9 @@ on fs
     setprop vendor.teefs_state ready
     setprop ro.hardware.gatekeeper mitee
 
-    symlink /dev/block/platform/bootdevice /dev/block/bootdevice
-
-
-on early-fs
-    start vold
-
-on fs
-    setprop sys.usb.config adb
-    start adbd
-
-on late-fs
-    mount_all /first_stage_ramdisk/fstab.mt6855 --late
+    symlink /dev/block/platform/soc/112b0000.ufshci /dev/block/platform/bootdevice
+    symlink /dev/block/platform/soc/112b0000.ufshci /dev/block/bootdevice
+    symlink /dev/block/platform/soc/112b0000.ufshci/by-name /dev/block/bootdevice/by-name
 
 on post-fs
     exec_background - system log -- /system/bin/recovery-refresh
@@ -133,10 +133,12 @@ on property:twrp.all.users.decrypted=true
 #    start haptic_hal
 
 on boot
+    setprop sys.usb.config adb
+    start adbd
     start vendor.health-default
 
 # save logs to cache/ 
-exec u®recovery:s0 root root -- /system/bin/sh -c "sleep 2; dmesg > /cache/twrp_boot_dmesg.log 2>&1; cat /proc/kallsyms > /cache/twrp_kallsyms.log 2>&1; cat /proc/bus/input/devices > /cache/twrp_input_devices.log 2>&1"
+    exec u:r:recovery:s0 root root -- /system/bin/sh -c "sleep 2; dmesg > /cache/twrp_boot_dmesg.log 2>&1; cat /proc/kallsyms > /cache/twrp_kallsyms.log 2>&1; cat /proc/bus/input/devices > /cache/twrp_input_devices.log 2>&1"
 
 on property:persist.vendor.mtk.pl_lnk=1
     symlink /dev/block/mapper/pl_a /dev/block/by-name/preloader_raw_a
@@ -158,3 +160,23 @@ on property:vendor.mtk.boot1_linkb=1
     symlink /dev/block/sdb /dev/block/mmcblk0boot1
 on property:vendor.mtk.boot1_linkc=1
     symlink /dev/block/sdc /dev/block/mmcblk0boot1
+
+# USB Configfs MTP support
+on property:sys.usb.config=mtp && property:sys.usb.ffs.mtp.ready=1 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    write /config/usb_gadget/g1/idProduct 0x4EE1
+    symlink /config/usb_gadget/g1/functions/ffs.mtp /config/usb_gadget/g1/configs/b.1/f1
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=mtp,adb && property:sys.usb.ffs.ready=1 && property:sys.usb.ffs.mtp.ready=1 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp_adb"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    write /config/usb_gadget/g1/idProduct 0x4EE2
+    symlink /config/usb_gadget/g1/functions/ffs.mtp /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}

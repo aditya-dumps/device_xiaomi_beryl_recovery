@@ -11,4 +11,6 @@ PRODUCT_MAKEFILES := \
 COMMON_LUNCH_CHOICES := \
     twrp_beryl-user \
     twrp_beryl-userdebug \
-    twrp_beryl-eng
+    twrp_beryl-eng \
+    twrp_beryl-ap2a-eng \
+    twrp_beryl-ap2a-userdebug

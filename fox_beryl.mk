@@ -33,9 +33,11 @@ OF_ALLOW_DISABLE_NAVBAR := 0
 OF_CLOCK_POS := 1
 OF_OPTIONS_LIST_NUM := 9
 
+FOX_REFERENCE_VENDOR_BOOT_IMAGE := device/xiaomi/beryl/prebuilt/vendor_boot.img
+
 # other stuff
 OF_QUICK_BACKUP_LIST := /boot;/persist_image;
-OF_ENABLE_LPTOOLS := 1
+OF_ENABLE_LPTOOLS := 0
 OF_NO_TREBLE_COMPATIBILITY_CHECK := 1
 OF_DYNAMIC_FULL_SIZE := 9126805504
 
@@ -64,8 +66,12 @@ OF_LOOP_DEVICE_ERRORS_TO_LOG := 1
 # lz4 compression
 OF_USE_LZ4_COMPRESSION := 1 
 
+# Drastic size reduction to fit within 64 MB partition limit on Header v4
+FOX_EXTREME_SIZE_REDUCTION := 1
+FOX_DRASTIC_SIZE_REDUCTION := 1
+
 # build all the partition tools
-OF_ENABLE_ALL_PARTITION_TOOLS := 1
+OF_ENABLE_ALL_PARTITION_TOOLS := 0
 
 ifeq ($(TW_INCLUDE_CRYPTO),false)
 	# Set to 1 to skip the FBE decryption routines (prevents hanging at the Fox logo or Redmi/Mi logo)
@@ -98,7 +104,7 @@ OF_DISABLE_ORS_AUTO_REBOOT := 1
 OF_FORCE_DATA_FORMAT_F2FS := 1
 
 # Set this to 1 to include an addon for removing factory reset protection (FRP)
-OF_ENABLE_FRP_ADDON := 1
+OF_ENABLE_FRP_ADDON := 0
 
 # Set to 1 to force the casefolding props to true. Useful for devices that shipped with Android 11+/FBEv2, where casefolding is always used
 OF_FORCE_CASEFOLDING := 1

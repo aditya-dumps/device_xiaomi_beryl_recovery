@@ -55,13 +55,7 @@ PRODUCT_PACKAGES += \
     android.hardware.boot@1.2-impl \
     libmtk_bsg
 
-PRODUCT_PACKAGES += \
-    otapreopt_script \
-    cppreopts.sh \
-    update_engine \
-    update_verifier \
-    update_engine_sideload \
-    checkpoint_gc
+# Recovery basics
 
 PRODUCT_PACKAGES += \
     vold.recovery \
@@ -94,10 +88,6 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     fstab.mt6855.vendor_ramdisk
 
-# Keystore2
-PRODUCT_PACKAGES += \
-    android.system.keystore2
-
 # Drm
 PRODUCT_PACKAGES += \
     android.hardware.drm@1.4
@@ -106,21 +96,21 @@ PRODUCT_PACKAGES += \
 TARGET_RECOVERY_DEVICE_MODULES += \
     android.hardware.keymaster@4.1 \
     android.hardware.keymaster-V4-ndk.so \
-    android.hardware.graphics.common@1.0 \
     libion \
-    libxml2 \
     android.hardware.boot@1.0 \
     android.hardware.boot@1.1 \
-    android.hardware.boot-V1-ndk
+    android.hardware.boot-V1-ndk \
+    libsysutils \
+    libvintf
 
 TW_RECOVERY_ADDITIONAL_RELINK_LIBRARY_FILES += \
     $(TARGET_OUT_SHARED_LIBRARIES)/android.hardware.keymaster@4.1.so \
-    $(TARGET_OUT_SHARED_LIBRARIES)/android.hardware.graphics.common@1.0.so \
     $(TARGET_OUT_SHARED_LIBRARIES)/libion.so \
-    $(TARGET_OUT_SHARED_LIBRARIES)/libxml2.so \
     $(TARGET_OUT_SHARED_LIBRARIES)/android.hardware.boot@1.0.so \
     $(TARGET_OUT_SHARED_LIBRARIES)/android.hardware.boot@1.1.so \
     $(TARGET_OUT_SHARED_LIBRARIES)/android.hardware.boot-V1-ndk.so \
+    $(TARGET_OUT_SHARED_LIBRARIES)/libsysutils.so \
+    $(TARGET_OUT_SHARED_LIBRARIES)/libvintf.so
 
 # Copy first-stage fstabs to vendor_ramdisk — required by first-stage init
 PRODUCT_COPY_FILES += \
@@ -151,15 +141,9 @@ PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/vendor_ramdisk/product_property_contexts:$(TARGET_COPY_OUT_VENDOR_RAMDISK)/product_property_contexts \
     $(LOCAL_PATH)/vendor_ramdisk/product_service_contexts:$(TARGET_COPY_OUT_VENDOR_RAMDISK)/product_service_contexts
 
-# Copy all system/ to vendor_ramdisk — boot service, health HAL, config
-PRODUCT_COPY_FILES += \
-    $(call find-copy-subdir-files,*,$(LOCAL_PATH)/recovery/root/system,$(TARGET_COPY_OUT_VENDOR_RAMDISK)/system)
+# Copy stock kernel modules to vendor_ramdisk (required for UFS storage, display, USB)
+PRODUCT_COPY_FILES += $(call find-copy-subdir-files,*,$(LOCAL_PATH)/vendor_ramdisk/lib,$(TARGET_COPY_OUT_VENDOR_RAMDISK)/lib)
 
-# Copy root-level RC files to vendor_ramdisk — imported by init during normal + recovery boot
-PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/recovery/root/init.recovery.mt6855.rc:$(TARGET_COPY_OUT_VENDOR_RAMDISK)/init.recovery.mt6855.rc \
-    $(LOCAL_PATH)/recovery/root/tee-supplicant.rc:$(TARGET_COPY_OUT_VENDOR_RAMDISK)/tee-supplicant.rc \
-    $(LOCAL_PATH)/recovery/root/miteelog.rc:$(TARGET_COPY_OUT_VENDOR_RAMDISK)/miteelog.rc
 
 # honestly! fuck this vintf 9.0 issue!!!
 # trying to get rid of from the manifest version 9.0  issue - stop this file from being generated

@@ -238,7 +238,7 @@ TW_NO_HAPTICS := false
 
 # Flashlight
 OF_FLASHLIGHT_ENABLE := 1
-OF_FL_PATH1 := "/flashlight"
+OF_FL_PATH1 := /flashlight
 
 TW_USE_SERIALNO_PROPERTY_FOR_DEVICE_ID := true
 TW_LOAD_VENDOR_MODULES := "fts_touch_i2c.ko lct_tp.ko xiaomi_tp.ko xiaomi_fp.ko adsp.ko nfc_i2c.ko mtk_battery_manager.ko mt6375-battery.ko auth_battery.ko charger_class.ko mtk_charger_framework.ko regulator-vibrator.ko"

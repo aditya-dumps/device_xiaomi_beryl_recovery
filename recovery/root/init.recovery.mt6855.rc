@@ -162,6 +162,20 @@ on boot
     write /sys/class/android_usb/android0/f_mtp/cpu_mask 0x80
     write /sys/module/usb_f_mtp/parameters/mtp_rx_cont 1
 
+    # Vibrator
+    chown system system /sys/class/leds/vibrator/trigger
+    write /sys/class/leds/vibrator/trigger "transient"
+    chown system system /sys/class/leds/vibrator/activate
+    chown system system /sys/class/leds/vibrator/brightness
+    chown system system /sys/class/leds/vibrator/duration
+    chown system system /sys/class/leds/vibrator/state
+    chmod 0666 /sys/class/leds/vibrator/activate
+    chmod 0666 /sys/class/leds/vibrator/brightness
+    chmod 0666 /sys/class/leds/vibrator/duration
+    chmod 0666 /sys/class/leds/vibrator/state
+    chown system system /sys/class/timed_output/vibrator/enable
+    chmod 0666 /sys/class/timed_output/vibrator/enable
+
 # save logs to cache/ 
     exec u:r:recovery:s0 root root -- /system/bin/sh -c "sleep 2; dmesg > /cache/twrp_boot_dmesg.log 2>&1; cat /proc/kallsyms > /cache/twrp_kallsyms.log 2>&1; cat /proc/bus/input/devices > /cache/twrp_input_devices.log 2>&1"
 

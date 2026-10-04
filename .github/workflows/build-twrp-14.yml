@@ -1,0 +1,66 @@
+name: Build TWRP 14
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Build target
+        required: true
+        default: vendorbootimage
+        type: choice
+        options:
+          - vendorbootimage
+          - bootimage
+          - recoveryimage
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout builder
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y adb bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32readline-dev lib32z1-dev libelf-dev liblz4-tool libncurses5-dev libncurses6 libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools unzip xsltproc zip zlib1g-dev
+      - name: Install repo
+        run: |
+          mkdir -p "$HOME/bin"
+          curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo -o "$HOME/bin/repo"
+          chmod a+x "$HOME/bin/repo"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+      - name: Initialize TWRP source
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/twrp"
+          cd "$GITHUB_WORKSPACE/twrp"
+          repo init -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-14
+          repo sync -c --no-tags --optimized-fetch --prune --force-sync -j2
+      - name: Add beryl device tree
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/twrp/device/xiaomi"
+          git clone --depth=1 --branch twrp-14 https://github.com/sairajkandkar007/device_xiaomi_beryl_recovery.git "$GITHUB_WORKSPACE/twrp/device/xiaomi/beryl"
+      - name: Build
+        working-directory: twrp
+        env:
+          ALLOW_MISSING_DEPENDENCIES: "true"
+          BUILD_BROKEN_DUP_RULES: "true"
+          BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES: "true"
+          BUILD_BROKEN_PREBUILT_ELF_FILES: "true"
+          BUILD_BROKEN_MISSING_REQUIRED_MODULES: "true"
+          SOONG_ALLOW_MISSING_DEPENDENCIES: "true"
+        run: |
+          source build/envsetup.sh
+          lunch twrp_beryl-eng
+          mka "$GITHUB_EVENT_INPUTS_TARGET"
+      - name: Collect artifacts
+        if: always()
+        run: |
+          mkdir -p artifacts
+          find twrp/out/target/product/beryl -maxdepth 1 -type f -name '*.img' -exec cp {} artifacts/ \; 2>/dev/null || true
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: twrp-beryl-build
+          path: artifacts/
+          if-no-files-found: warn

@@ -14,7 +14,6 @@ BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true
 BUILD_BROKEN_PREBUILT_ELF_FILES := true
 BUILD_BROKEN_MISSING_REQUIRED_MODULES := true
 SOONG_ALLOW_MISSING_DEPENDENCIES := true
--include bootable/recovery/orangefox_soong.mk
 
 # Architecture
 TARGET_ARCH := arm64
@@ -236,9 +235,6 @@ TW_CUSTOM_CPU_TEMP_PATH := "/sys/class/thermal/thermal_zone9/temp"
 # Haptics
 TW_NO_HAPTICS := false
 
-# Flashlight
-OF_FLASHLIGHT_ENABLE := 1
-OF_FL_PATH1 := /tmp/flashlight
 
 TW_USE_SERIALNO_PROPERTY_FOR_DEVICE_ID := true
 TW_LOAD_VENDOR_MODULES := "fts_touch_i2c.ko lct_tp.ko xiaomi_tp.ko xiaomi_fp.ko adsp.ko nfc_i2c.ko mtk_battery_manager.ko mt6375-battery.ko auth_battery.ko charger_class.ko mtk_charger_framework.ko regulator-vibrator.ko flashlight.ko lm3644.ko"

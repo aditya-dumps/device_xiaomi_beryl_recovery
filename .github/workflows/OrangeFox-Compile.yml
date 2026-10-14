@@ -1,0 +1,172 @@
+name: OrangeFox - Build
+
+# Credits to:
+# https://github.com/TeamWin
+# https://gitlab.com/OrangeFox
+# https://github.com/azwhikaru for Recovery Builder Template
+# And all Contributors in every repositories I used
+
+on:
+  workflow_dispatch:
+    inputs:
+      MANIFEST_BRANCH:
+        description: 'OrangeFox Manifest Branch'
+        required: true
+        default: '14.1'
+        type: choice
+        options:
+        - 12.1
+        - 14.1
+      DEVICE_TREE:
+        description: 'OrangeFox Device Tree'
+        required: true
+        default: 'https://github.com/IQ-HARRY7/device_xiaomi_beryl_recovery.git'
+      DEVICE_TREE_BRANCH:
+        description: 'OrangeFox Device Tree Branch'
+        required: true
+        default: 'fox_14.1'
+        type: choice
+        options:
+        - main
+        - master
+        - fox_14.1
+        - test
+      DEVICE_PATH:
+        description: 'Specify your Device Path'
+        required: true
+        default: 'device/xiaomi/beryl'
+      DEVICE_NAME:
+        description: 'Specify your Device Codename'
+        required: true
+        default: 'beryl'
+      RELEASE_TYPE:
+        description: 'Specify your Release Type'
+        required: true
+        default: 'Debug'
+        type: choice
+        options:
+        - Release
+        - Debug
+      BUILD_TYPE:
+        description: 'Specify your Build Type'
+        required: true
+        default: 'eng'
+        type: choice
+        options:
+        - user
+        - userdebug
+        - eng
+      BUILD_TARGET:
+        description: 'Specify your Build Target'
+        required: true
+        default: 'vendorboot'
+        type: choice
+        options:
+        - boot
+        - recovery
+        - vendorboot
+
+jobs:
+  build:
+    name: Build OFR by ${{ github.actor }}
+    runs-on: ubuntu-22.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      contents: write
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+              
+    - name: Clean-up
+      uses: rokibhasansagar/slimhub_actions@main
+
+    - name: Swap Space
+      uses: pierotofy/set-swap-space@master
+      with:
+        swap-size-gb: 16
+      
+    - name: Build Environment
+      run: |
+        sudo apt install aria2 -y
+        git clone https://gitlab.com/OrangeFox/misc/scripts.git -b master
+        cd scripts
+        sudo bash setup/android_build_env.sh
+      
+    - name: Set-up Manifest
+      run: |
+        mkdir -p ${GITHUB_WORKSPACE}/OrangeFox
+        cd ${GITHUB_WORKSPACE}/OrangeFox
+        git config --global user.name "${{ github.actor }}"
+        git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+        git clone https://gitlab.com/OrangeFox/sync.git -b master
+        cd sync
+        ./orangefox_sync.sh --branch ${{ inputs.MANIFEST_BRANCH }} --path ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}  
+        
+        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
+        
+        # Native Manifest Patching Fix (Correcting GitHub Runner environment)
+        if [ -f .repo/manifests/remove-minimal.xml ]; then
+          echo "✅ Found remove-minimal.xml. Stripping blocks natively..."
+          sed -i '/guava/d' .repo/manifests/remove-minimal.xml
+          sed -i '/gflags/d' .repo/manifests/remove-minimal.xml
+          echo "✅ Manifest patched. Synchronizing official tree components..."
+          repo sync -c --force-sync --no-clone-bundle --no-tags -j$(nproc --all) external/guava external/gflags
+        else
+          echo "⚠️ remove-minimal.xml missing from track path. Syncing targets downstream..."
+          repo sync -c --force-sync --no-clone-bundle --no-tags -j$(nproc --all) external/guava external/gflags
+        fi
+
+    - name: Clone Device Tree
+      run: |
+        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
+        git clone ${{ inputs.DEVICE_TREE }} -b ${{ inputs.DEVICE_TREE_BRANCH }} ./${{ inputs.DEVICE_PATH }}
+        cd ${{ inputs.DEVICE_PATH }}
+        echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
+    - name: Building OrangeFox
+      run: |
+        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
+        set +e
+        source build/envsetup.sh
+        export ALLOW_MISSING_DEPENDENCIES=true
+        set -e
+
+        if [ "${{ inputs.MANIFEST_BRANCH }}" = "12.1" ];
+        then
+          echo "Building for 12.1"
+          lunch twrp_${{ inputs.DEVICE_NAME }}-${{ inputs.BUILD_TYPE }} && make clean && mka adbd ${{ inputs.BUILD_TARGET }}image -j$(nproc --all)
+        fi
+
+        if [ "${{ inputs.MANIFEST_BRANCH }}" = "14.1" ];
+        then
+          echo "Building for 14.1"
+          lunch twrp_${{ inputs.DEVICE_NAME }}-ap2a-${{ inputs.BUILD_TYPE }} && make clean && mka adbd ${{ inputs.BUILD_TARGET }}image -j$(nproc --all)
+        fi
+
+    - name: Set Release Properties
+      run: |
+        echo "BUILD_DATE=$(TZ=Asia/Manila date +%Y%m%d)" >> $GITHUB_ENV
+        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
+
+        DEVICE_TREE_URL="${{ inputs.DEVICE_TREE }}"
+        if [[ "${DEVICE_TREE_URL}" == *.git ]];
+        then
+          DEVICE_TREE_URL="${DEVICE_TREE_URL%.git}"
+        fi
+        echo "DEVICE_TREE_URL=${DEVICE_TREE_URL}" >> $GITHUB_ENV
+
+    - name: Upload to Release
+      uses: softprops/action-gh-release@v2
+      with:
+        generate_release_notes: true
+        files: |
+          OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/OrangeFox*.img
+          OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/OrangeFox*.zip
+        name: OrangeFox Recovery for ${{ inputs.DEVICE_NAME }} // ${{ env.BUILD_DATE }}
+        tag_name: ${{ github.run_id }}
+        body: |
+          ## OrangeFox Recovery Build - ${{ inputs.RELEASE_TYPE }}
+          Build: fox_${{ inputs.MANIFEST_BRANCH }}
+          Device: [Device Tree/Branch](${{ env.DEVICE_TREE_URL }}/tree/${{ inputs.DEVICE_TREE_BRANCH }})
+          Commit: Most recent [commit](${{ env.DEVICE_TREE_URL }}/commit/${{ env.COMMIT_ID }}) during building.

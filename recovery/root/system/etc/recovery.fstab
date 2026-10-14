@@ -16,6 +16,9 @@ odm_dlkm                                                /odm_dlkm              e
 system_dlkm                                             /system_dlkm           erofs   ro                                                                           wait,slotselect,avb,logical,first_stage_mount
 system_dlkm                                             /system_dlkm           ext4    ro                                                                           wait,slotselect,avb,logical,first_stage_mount
 
+# persist
+/dev/block/by-name/persist                              /persist               ext4    noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable,first_stage_mount
+
 # Metadata
 /dev/block/by-name/metadata                             /metadata              ext4    noatime,nosuid,nodev,discard                                                 wait,check,formattable,wrappedkey,first_stage_mount,disable_verification
 

@@ -6,11 +6,13 @@
 #
 
 PRODUCT_MAKEFILES := \
+    $(LOCAL_DIR)/pb_beryl.mk \
     $(LOCAL_DIR)/twrp_beryl.mk
 
 COMMON_LUNCH_CHOICES := \
+    pb_beryl-user \
+    pb_beryl-userdebug \
+    pb_beryl-eng \
     twrp_beryl-user \
     twrp_beryl-userdebug \
-    twrp_beryl-eng \
-    twrp_beryl-ap2a-eng \
-    twrp_beryl-ap2a-userdebug
+    twrp_beryl-eng

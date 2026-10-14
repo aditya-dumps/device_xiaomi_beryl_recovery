@@ -1,0 +1,265 @@
+name: Pitch Black Recovery Project - Build
+
+# Credits:
+# https://github.com/PitchBlackRecoveryProject
+# https://github.com/TeamWin
+# https://github.com/azwhikaru for the Recovery Builder Template
+# And all contributors to the repositories used
+
+on:
+  workflow_dispatch:
+    inputs:
+      MANIFEST_BRANCH:
+        description: 'Pitch Black Recovery manifest branch'
+        required: true
+        default: 'android-14.0'
+        type: choice
+        options:
+          - android-14.0
+          - android-12.1
+      DEVICE_TREE:
+        description: 'Beryl device-tree repository'
+        required: true
+        default: 'https://github.com/IQ-HARRY7/device_xiaomi_beryl_recovery.git'
+        type: string
+      DEVICE_TREE_BRANCH:
+        description: 'Device Tree Branch'
+        required: true
+        default: 'PBRP'
+        type: choice
+        options:
+        - main
+        - master
+        - fox_14.1
+        - PBRP
+      DEVICE_PATH:
+        description: 'Device tree path inside the source tree'
+        required: true
+        default: 'device/xiaomi/beryl'
+        type: string
+      DEVICE_NAME:
+        description: 'Device codename'
+        required: true
+        default: 'beryl'
+        type: string
+      RELEASE_TYPE:
+        description: 'Release label'
+        required: true
+        default: 'Debug'
+        type: choice
+        options:
+          - Release
+          - Debug
+      BUILD_TYPE:
+        description: 'Android build variant'
+        required: true
+        default: 'eng'
+        type: choice
+        options:
+          - user
+          - userdebug
+          - eng
+      BUILD_TARGET:
+        description: 'Recovery image location for this device'
+        required: true
+        default: 'vendorboot'
+        type: choice
+        options:
+          - vendorboot
+
+jobs:
+  build:
+    name: Build PBRP by ${{ github.actor }}
+    runs-on: ubuntu-22.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Clean-up
+        uses: rokibhasansagar/slimhub_actions@main
+
+      - name: Swap Space
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 16
+
+      - name: Build Environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            aria2 bc bison build-essential ccache curl flex g++-multilib gcc-multilib \
+            git git-lfs gnupg gperf imagemagick lib32ncurses-dev lib32readline-dev \
+            lib32z1-dev libelf-dev liblz4-tool libncurses-dev libsdl1.2-dev libssl-dev \
+            libxml2 libxml2-utils lzop openjdk-11-jdk pngcrush rsync schedtool \
+            squashfs-tools xsltproc zip zlib1g-dev python-is-python3
+
+          mkdir -p "$HOME/bin"
+          curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo -o "$HOME/bin/repo"
+          chmod a+x "$HOME/bin/repo"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+          echo "JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64" >> "$GITHUB_ENV"
+          echo "/usr/lib/jvm/java-11-openjdk-amd64/bin" >> "$GITHUB_PATH"
+
+      - name: Set-up PBRP Manifest
+        run: |
+          SOURCE_DIR="${GITHUB_WORKSPACE}/PBRP/pbrp_${{ inputs.MANIFEST_BRANCH }}"
+          mkdir -p "$SOURCE_DIR"
+          cd "$SOURCE_DIR"
+
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+
+          repo init -u https://github.com/PitchBlackRecoveryProject/manifest_pb.git \
+            -b "${{ inputs.MANIFEST_BRANCH }}"
+
+          # Keep the existing runner workaround, applying it before the first sync.
+          if [ -f .repo/manifests/remove-minimal.xml ]; then
+            sed -i '/guava/d' .repo/manifests/remove-minimal.xml
+            sed -i '/gflags/d' .repo/manifests/remove-minimal.xml
+          fi
+
+          repo sync -c --force-sync --no-clone-bundle --no-tags -j"$(nproc --all)"
+
+      - name: Clone Device Tree
+        run: |
+          SOURCE_DIR="${GITHUB_WORKSPACE}/PBRP/pbrp_${{ inputs.MANIFEST_BRANCH }}"
+          cd "$SOURCE_DIR"
+
+          git clone "${{ inputs.DEVICE_TREE }}" \
+            -b "${{ inputs.DEVICE_TREE_BRANCH }}" "${{ inputs.DEVICE_PATH }}"
+
+          cd "${{ inputs.DEVICE_PATH }}"
+          echo "COMMIT_ID=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Prepare PBRP Device Configuration
+        run: |
+          SOURCE_DIR="${GITHUB_WORKSPACE}/PBRP/pbrp_${{ inputs.MANIFEST_BRANCH }}"
+          TREE_DIR="$SOURCE_DIR/${{ inputs.DEVICE_PATH }}"
+
+          test -f "$TREE_DIR/BoardConfig.mk" || {
+            echo "ERROR: BoardConfig.mk was not found in $TREE_DIR"
+            exit 1
+          }
+          test -f "$TREE_DIR/device.mk" || {
+            echo "ERROR: device.mk was not found in $TREE_DIR"
+            exit 1
+          }
+
+          # Clean up any leftover twrp_beryl.mk if pb_beryl.mk does not exist yet
+          if [ -f "$TREE_DIR/twrp_beryl.mk" ] && [ ! -f "$TREE_DIR/pb_beryl.mk" ]; then
+            mv -f "$TREE_DIR/twrp_beryl.mk" "$TREE_DIR/pb_beryl.mk"
+          fi
+
+          # Ensure AndroidProducts.mk exists and includes pb_beryl.mk
+          if [ ! -f "$TREE_DIR/AndroidProducts.mk" ] || ! grep -q "pb_beryl" "$TREE_DIR/AndroidProducts.mk"; then
+            cat > "$TREE_DIR/AndroidProducts.mk" <<'EOF'
+          PRODUCT_MAKEFILES := \
+              $(LOCAL_DIR)/pb_beryl.mk
+
+          COMMON_LUNCH_CHOICES := \
+              pb_beryl-user \
+              pb_beryl-userdebug \
+              pb_beryl-eng
+          EOF
+          fi
+
+          # Ensure PB_DEVICE_RATIO is set in BoardConfig.mk if not already present
+          if ! grep -q "PB_DEVICE_RATIO" "$TREE_DIR/BoardConfig.mk"; then
+            printf '\n# PBRP display configuration\nPB_DEVICE_RATIO := "20:9"\n' >> "$TREE_DIR/BoardConfig.mk"
+          fi
+
+          echo "Verified PBRP product configuration for ${{ inputs.DEVICE_NAME }}."
+
+      - name: Build Pitch Black Recovery
+        run: |
+          SOURCE_DIR="${GITHUB_WORKSPACE}/PBRP/pbrp_${{ inputs.MANIFEST_BRANCH }}"
+          cd "$SOURCE_DIR"
+
+          export ALLOW_MISSING_DEPENDENCIES=true
+          source build/envsetup.sh
+          lunch "pb_${{ inputs.DEVICE_NAME }}-${{ inputs.BUILD_TYPE }}"
+          make clean
+
+          # Build PitchBlack Recovery Project target (builds vendor_boot image and PBRP zip)
+          mka pbrp -j"$(nproc --all)"
+
+      - name: Set Release Properties
+        run: |
+          BUILD_DATE="$(TZ=Asia/Manila date +%Y%m%d)"
+          echo "BUILD_DATE=${BUILD_DATE}" >> "$GITHUB_ENV"
+
+          DEVICE_TREE_URL="${{ inputs.DEVICE_TREE }}"
+          if [[ "$DEVICE_TREE_URL" == *.git ]]; then
+            DEVICE_TREE_URL="${DEVICE_TREE_URL%.git}"
+          fi
+          echo "DEVICE_TREE_URL=${DEVICE_TREE_URL}" >> "$GITHUB_ENV"
+
+          SOURCE_DIR="${GITHUB_WORKSPACE}/PBRP/pbrp_${{ inputs.MANIFEST_BRANCH }}"
+          TREE_DIR="$SOURCE_DIR/${{ inputs.DEVICE_PATH }}"
+          OUTPUT_DIR="$SOURCE_DIR/out/target/product/${{ inputs.DEVICE_NAME }}"
+          SOURCE_IMAGE="$OUTPUT_DIR/vendor_boot.img"
+          RELEASE_DIR="${GITHUB_WORKSPACE}/release-assets"
+          mkdir -p "$RELEASE_DIR"
+
+          if [[ ! -f "$SOURCE_IMAGE" ]]; then
+            echo "ERROR: Expected image was not created: $SOURCE_IMAGE"
+            echo "Available files in output directory:"
+            find "$OUTPUT_DIR" -maxdepth 1 -type f 2>/dev/null || true
+            exit 1
+          fi
+
+          # Copy vendor_boot.img
+          IMAGE_NAME="PBRP-${{ inputs.DEVICE_NAME }}-vendorboot-${BUILD_DATE}.img"
+          cp "$SOURCE_IMAGE" "$RELEASE_DIR/${IMAGE_NAME}"
+
+          # Copy standalone recovery ramdisk if available
+          if [ -f "$OUTPUT_DIR/vendor_ramdisk_recovery.cpio" ]; then
+            cp "$OUTPUT_DIR/vendor_ramdisk_recovery.cpio" "$RELEASE_DIR/"
+          fi
+
+          # Look for any existing PBRP recovery zip generated by the build system
+          FOUND_ZIP=""
+          for zip_file in "$OUTPUT_DIR"/PBRP-*.zip "$OUTPUT_DIR"/*${{ inputs.DEVICE_NAME }}*.zip; do
+            if [ -f "$zip_file" ]; then
+              FOUND_ZIP="$zip_file"
+              echo "Found build-generated ZIP: $zip_file"
+              cp "$zip_file" "$RELEASE_DIR/"
+              break
+            fi
+          done
+
+          # If no recovery zip was produced by the make target, generate using helper script
+          if [ -z "$FOUND_ZIP" ]; then
+            echo "PBRP make target did not produce a zip; generating flashable zip via helper script..."
+            bash "$TREE_DIR/scripts/build_flashable_zip.sh" \
+              "$OUTPUT_DIR" \
+              "$RELEASE_DIR" \
+              "${{ inputs.DEVICE_NAME }}" \
+              "$BUILD_DATE"
+          fi
+
+          # Generate sha256 checksums
+          cd "$RELEASE_DIR"
+          sha256sum * > SHA256SUMS.txt
+          cd "${GITHUB_WORKSPACE}"
+          echo "Generated release assets:"
+          ls -la "$RELEASE_DIR"
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: release-assets/*
+          name: Pitch Black Recovery for ${{ inputs.DEVICE_NAME }} // ${{ env.BUILD_DATE }}
+          tag_name: ${{ github.run_id }}
+          body: |
+            ## Pitch Black Recovery Project (PBRP) Build - ${{ inputs.RELEASE_TYPE }}
+            - Manifest: ${{ inputs.MANIFEST_BRANCH }}
+            - Device: ${{ inputs.DEVICE_NAME }}
+            - Device tree: [repository](${{ env.DEVICE_TREE_URL }})
+            - Source commit: [${{ env.COMMIT_ID }}](${{ env.DEVICE_TREE_URL }}/commit/${{ env.COMMIT_ID }})
+            - Build target: vendor_boot.img + flashable recovery zip

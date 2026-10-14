@@ -15,18 +15,17 @@ $(call inherit-product, vendor/twrp/config/common.mk)
 # Inherit from beryl device
 $(call inherit-product, device/xiaomi/beryl/device.mk)
 
-# Configure emulated_storage.mk
-$(call inherit-product, $(SRC_TARGET_DIR)/product/emulated_storage.mk)
+# Configure emulated_storage.mk (if present)
+$(call inherit-product-if-exists, $(SRC_TARGET_DIR)/product/emulated_storage.mk)
 
-# Device-specific OrangeFox configuration
-$(call inherit-product, device/xiaomi/beryl/fox_beryl.mk)
+# Inherit PBRP common stuff if exists
+$(call inherit-product-if-exists, vendor/pb/config/common.mk)
 
 PRODUCT_DEVICE := beryl
 PRODUCT_NAME := twrp_beryl
 PRODUCT_BRAND := Redmi
 PRODUCT_MODEL := Redmi Note 14 5G
 PRODUCT_MANUFACTURER := Xiaomi
-PRODUCT_NAME := twrp_$(PRODUCT_DEVICE)
 
 # Hide Reflash TWRP & FUSE passthrough
 PRODUCT_PROPERTY_OVERRIDES += \

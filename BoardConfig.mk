@@ -14,7 +14,6 @@ BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true
 BUILD_BROKEN_PREBUILT_ELF_FILES := true
 BUILD_BROKEN_MISSING_REQUIRED_MODULES := true
 SOONG_ALLOW_MISSING_DEPENDENCIES := true
--include bootable/recovery/orangefox_soong.mk
 
 # Architecture
 TARGET_ARCH := arm64
@@ -72,18 +71,17 @@ BOARD_DTB_SIZE                := 266395
 TARGET_KERNEL_ARCH            := arm64
 TARGET_KERNEL_HEADER_ARCH     := arm64
 BOARD_KERNEL_IMAGE_NAME       := kernel
-BOARD_VENDOR_CMDLINE          := "bootopt=64S3,32N2,64N2 bootconfig"
+BOARD_KERNEL_CMDLINE          := bootopt=64S3,32N2,64N2 bootconfig
+BOARD_VENDOR_CMDLINE          := bootopt=64S3,32N2,64N2 bootconfig
 
-# Header v4
-BOARD_MKBOOTIMG_ARGS += --header_version $(BOARD_BOOT_HEADER_VERSION)
-BOARD_MKBOOTIMG_ARGS += --pagesize $(BOARD_PAGE_SIZE)
-BOARD_MKBOOTIMG_ARGS += --vendor_cmdline $(BOARD_VENDOR_CMDLINE)
-BOARD_MKBOOTIMG_ARGS += --base $(BOARD_KERNEL_BASE)
-BOARD_MKBOOTIMG_ARGS += --kernel_offset $(BOARD_KERNEL_OFFSET)
-BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
-BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_TAGS_OFFSET)
-BOARD_MKBOOTIMG_ARGS += --dtb_offset $(BOARD_DTB_OFFSET)
-BOARD_MKBOOTIMG_ARGS += --dtb $(TARGET_PREBUILT_DTB)
+# mkbootimg args for MTK load addresses
+BOARD_MKBOOTIMG_ARGS += \
+    --header_version $(BOARD_BOOT_HEADER_VERSION) \
+    --kernel_offset $(BOARD_KERNEL_OFFSET) \
+    --ramdisk_offset $(BOARD_RAMDISK_OFFSET) \
+    --tags_offset $(BOARD_TAGS_OFFSET) \
+    --dtb_offset $(BOARD_DTB_OFFSET) \
+    --dtb $(TARGET_PREBUILT_DTB)
 
 # SELinux Permissive (Debugging Only)
 BOARD_BOOTCONFIG                               += androidboot.selinux=permissive
@@ -106,7 +104,6 @@ BOARD_INIT_BOOT_IMAGE_PARTITION_SIZE := 8388608
 BOARD_VENDOR_BOOTIMAGE_PARTITION_SIZE := 67108864
 BOARD_DTBOIMG_PARTITION_SIZE := 8388608
 BOARD_SYSTEMIMAGE_PARTITION_TYPE := ext4
-BOARD_USERDATAIMAGE_FILE_SYSTEM_TYPE := ext4
 BOARD_USERDATAIMAGE_FILE_SYSTEM_TYPE := f2fs
 BOARD_VENDORIMAGE_FILE_SYSTEM_TYPE := ext4
 BOARD_PRODUCTIMAGE_FILE_SYSTEM_TYPE := ext4
@@ -150,13 +147,9 @@ BOARD_USES_VENDOR_DLKMIMAGE := true
 BOARD_USES_ODM_DLKMIMAGE := true
 TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/recovery/root/system/etc/recovery.fstab
 BOARD_RECOVERY_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/recovery
-BOARD_VENDOR_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/vendor
 
 # Properties
 TARGET_SYSTEM_PROP += $(DEVICE_PATH)/system.prop
-
-# Flag to specify custom_bootimg.mk for Header v4 repacking
-BOARD_CUSTOM_BOOTIMG_MK := $(DEVICE_PATH)/custom_bootimg.mk
 
 # Hack: prevent anti rollback
 PLATFORM_SECURITY_PATCH := 2099-12-31
@@ -205,18 +198,24 @@ TW_INCLUDE_REPACKTOOLS := false
 TW_EXCLUDE_APEX := true
 TW_EXCLUDE_PYTHON := true
 TW_EXCLUDE_TWRPAPP := true
+TW_EXCLUDE_NANO := true
+TW_EXCLUDE_BASH := true
+TW_EXCLUDE_ZIP := true
+TW_EXCLUDE_TZDATA := true
+TW_NO_EXFAT_FUSE := true
+TW_NO_USB_STORAGE := true
 TARGET_USES_MKE2FS := true
 TW_INCLUDE_NTFS_3G := false
 TW_USE_TOOLBOX := true
 TW_INCLUDE_RESETPROP := true
 TW_EXCLUDE_DEFAULT_USB_INIT := true
 
-# Debug flags
-TWRP_INCLUDE_LOGCAT := true
-TARGET_USES_LOGD := true
+# Debug flags (disabled to reduce recovery image size)
+TWRP_INCLUDE_LOGCAT := false
+TARGET_USES_LOGD := false
 
-# Vendor_Boot
-BOARD_USES_RECOVERY_AS_BOOT :=
+# Recovery in vendor_boot
+BOARD_USES_RECOVERY_AS_BOOT := false
 BOARD_MOVE_GSI_AVB_KEYS_TO_VENDOR_BOOT := true
 BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE := true
 BOARD_USES_GENERIC_KERNEL_IMAGE := true
@@ -233,12 +232,18 @@ TW_CUSTOM_BATTERY_PATH := "/sys/class/power_supply/battery"
 TW_CUSTOM_CPU_TEMP_PATH := "/sys/class/thermal/thermal_zone1/temp"
 
 # Haptics
-TW_NO_HAPTICS := false
+TW_NO_HAPTICS := true
 
-# Flashlight
-OF_FLASHLIGHT_ENABLE := 1
-OF_FL_PATH1 := /tmp/flashlight
+# Flashlight / Torch
+PB_TORCH_PATH := "/sys/class/leds/flashlight"
+PB_TORCH_MAX_BRIGHTNESS := 1
+
+# PitchBlack Recovery Project (PBRP) Configuration
+PB_DEVICE_RATIO := "20:9"
+PB_ENGLISH := true
+PB_DISABLE_DEFAULT_DM_VERITY := true
+PB_DISABLE_DEFAULT_TREBLE_COMP := true
+MAINTAINER := IQ_HARRY_07
+TW_DEVICE_VERSION := beryl | IQ_HARRY_07
 
 TW_USE_SERIALNO_PROPERTY_FOR_DEVICE_ID := true
-TW_LOAD_VENDOR_MODULES := "fts_touch_i2c.ko lct_tp.ko xiaomi_tp.ko xiaomi_fp.ko adsp.ko nfc_i2c.ko mtk_battery_manager.ko mt6375-battery.ko auth_battery.ko charger_class.ko mtk_charger_framework.ko regulator-vibrator.ko flashlight.ko lm3644.ko"
-TW_LOAD_VENDOR_MODULES_EXCLUDE_GKI := true

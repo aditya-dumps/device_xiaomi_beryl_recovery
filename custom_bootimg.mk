@@ -24,16 +24,18 @@ VENDOR_BOOT_PATCH_DIR := $(PRODUCT_OUT)/vendor_boot_patch
 
 # Look for magiskboot
 HOST_ARCH_SUFFIX := $(if $(findstring aarch64,$(shell uname -m)),arm64,$(if $(findstring arm,$(shell uname -m)),arm,$(if $(findstring x86_64,$(shell uname -m)),x86_64,x86)))
-MAGISKBOOT := $(wildcard $(PWD)/external/magisk-prebuilt/prebuilt/magiskboot_$(HOST_ARCH_SUFFIX))
+MAGISKBOOT := $(wildcard $(DEVICE_PATH)/scripts/magiskboot)
+ifeq ($(MAGISKBOOT),)
+    MAGISKBOOT := $(wildcard $(PWD)/external/magisk-prebuilt/prebuilt/magiskboot_$(HOST_ARCH_SUFFIX))
+endif
 ifeq ($(MAGISKBOOT),)
     MAGISKBOOT := $(wildcard $(PWD)/external/magisk-prebuilt/prebuilt/magiskboot_x86_64)
 endif
 ifeq ($(MAGISKBOOT),)
-    MAGISKBOOT := $(wildcard $(DEVICE_PATH)/scripts/magiskboot)
-endif
-ifeq ($(MAGISKBOOT),)
     MAGISKBOOT := magiskboot
 endif
+
+TARGET_RECOVERY_RAMDISK_SRC ?= $(if $(recovery_uncompressed_ramdisk),$(recovery_uncompressed_ramdisk),$(PRODUCT_OUT)/ramdisk-recovery.cpio)
 
 $(INSTALLED_VENDOR_BOOTIMAGE_TARGET): $(recovery_uncompressed_ramdisk) $(VENDOR_BOOT_STOCK) $(AVBTOOL)
 	$(call pretty,"Target vendor_boot image: $@ (patched stock)")
@@ -41,28 +43,37 @@ $(INSTALLED_VENDOR_BOOTIMAGE_TARGET): $(recovery_uncompressed_ramdisk) $(VENDOR_
 		echo "error: missing stock vendor_boot at $(VENDOR_BOOT_STOCK)"; \
 		exit 1; \
 	fi
-	@if [ ! -f "$(TARGET_RECOVERY_ROOT_OUT)/system/bin/recovery" ]; then \
-		echo "error: $(TARGET_RECOVERY_ROOT_OUT)/system/bin/recovery is missing! Recovery binary was not built."; \
+	@chmod +x "$(MAGISKBOOT)" 2>/dev/null || true
+	@RAMDISK_SRC="$(TARGET_RECOVERY_RAMDISK_SRC)"; \
+	if [ ! -f "$$RAMDISK_SRC" ]; then \
+		RAMDISK_SRC="$(PRODUCT_OUT)/obj/PACKAGING/recovery_intermediates/ramdisk-recovery.cpio"; \
+	fi; \
+	if [ ! -f "$$RAMDISK_SRC" ]; then \
+		RAMDISK_SRC="$(PRODUCT_OUT)/ramdisk-recovery.cpio"; \
+	fi; \
+	if [ ! -f "$$RAMDISK_SRC" ]; then \
+		echo "error: cannot find recovery ramdisk cpio at $$RAMDISK_SRC"; \
 		exit 1; \
-	fi
-	@rm -rf "$(VENDOR_BOOT_PATCH_DIR)"
-	@mkdir -p "$(VENDOR_BOOT_PATCH_DIR)"
-	@cp -f "$(VENDOR_BOOT_STOCK)" "$(VENDOR_BOOT_PATCH_DIR)/stock.img"
-	@cd "$(VENDOR_BOOT_PATCH_DIR)" && "$(MAGISKBOOT)" unpack -n stock.img
-	@if [ -f "$(VENDOR_BOOT_PATCH_DIR)/vendor_ramdisk/recovery.cpio" ]; then \
-		cp -f "$(recovery_uncompressed_ramdisk)" "$(VENDOR_BOOT_PATCH_DIR)/vendor_ramdisk/recovery.cpio"; \
+	fi; \
+	echo "Using recovery ramdisk: $$RAMDISK_SRC"; \
+	rm -rf "$(VENDOR_BOOT_PATCH_DIR)"; \
+	mkdir -p "$(VENDOR_BOOT_PATCH_DIR)"; \
+	cp -f "$(VENDOR_BOOT_STOCK)" "$(VENDOR_BOOT_PATCH_DIR)/stock.img"; \
+	cd "$(VENDOR_BOOT_PATCH_DIR)" && "$(MAGISKBOOT)" unpack -n stock.img; \
+	if [ -f "$(VENDOR_BOOT_PATCH_DIR)/vendor_ramdisk/recovery.cpio" ]; then \
+		cp -f "$$RAMDISK_SRC" "$(VENDOR_BOOT_PATCH_DIR)/vendor_ramdisk/recovery.cpio"; \
 	else \
-		cp -f "$(recovery_uncompressed_ramdisk)" "$(VENDOR_BOOT_PATCH_DIR)/vendor_ramdisk_recovery.cpio"; \
-	fi
-	@cp -f "$(recovery_uncompressed_ramdisk)" "$(PRODUCT_OUT)/vendor_ramdisk_recovery.cpio"
-	@if [ -f "$(VENDOR_BOOT_PATCH_DIR)/bootconfig" ]; then \
+		cp -f "$$RAMDISK_SRC" "$(VENDOR_BOOT_PATCH_DIR)/vendor_ramdisk_recovery.cpio"; \
+	fi; \
+	cp -f "$$RAMDISK_SRC" "$(PRODUCT_OUT)/vendor_ramdisk_recovery.cpio"; \
+	if [ -f "$(VENDOR_BOOT_PATCH_DIR)/bootconfig" ]; then \
 		grep -q "androidboot.selinux=permissive" "$(VENDOR_BOOT_PATCH_DIR)/bootconfig" || \
 		echo "androidboot.selinux=permissive" >> "$(VENDOR_BOOT_PATCH_DIR)/bootconfig"; \
-	fi
-	@cd "$(VENDOR_BOOT_PATCH_DIR)" && PATCHVBMETAFLAG=true "$(MAGISKBOOT)" repack stock.img new_vendor_boot.img
-	@cp -f "$(VENDOR_BOOT_PATCH_DIR)/new_vendor_boot.img" "$@"
-	$(call assert-max-image-size,$@,$(BOARD_VENDOR_BOOTIMAGE_PARTITION_SIZE))
-	$(AVBTOOL) erase_footer --image $@ >/dev/null 2>&1 || true
+	fi; \
+	cd "$(VENDOR_BOOT_PATCH_DIR)" && PATCHVBMETAFLAG=true "$(MAGISKBOOT)" repack stock.img new_vendor_boot.img; \
+	cp -f "$(VENDOR_BOOT_PATCH_DIR)/new_vendor_boot.img" "$@"; \
+	$(call assert-max-image-size,$@,$(BOARD_VENDOR_BOOTIMAGE_PARTITION_SIZE)); \
+	$(AVBTOOL) erase_footer --image $@ >/dev/null 2>&1 || true; \
 	$(AVBTOOL) add_hash_footer \
 		--image $@ \
 		--partition_size $(BOARD_VENDOR_BOOTIMAGE_PARTITION_SIZE) \

@@ -149,6 +149,9 @@ TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/recovery/root/system/etc/recovery.fstab
 BOARD_RECOVERY_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/recovery
 
 # Properties
+BOARD_CUSTOM_BOOTIMG_MK := $(DEVICE_PATH)/custom_bootimg.mk
+
+# Properties
 TARGET_SYSTEM_PROP += $(DEVICE_PATH)/system.prop
 
 # Hack: prevent anti rollback

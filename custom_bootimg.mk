@@ -41,18 +41,18 @@ $(INSTALLED_VENDOR_BOOTIMAGE_TARGET): $(recovery_uncompressed_ramdisk) $(VENDOR_
 		exit 1; \
 	fi
 	@chmod +x "$(MAGISKBOOT_BIN)" 2>/dev/null || true
-	@RAMDISK_SRC="$(abspath $(PRODUCT_OUT)/ramdisk-recovery.cpio)"; \
+	@RAMDISK_SRC="$(abspath $(PRODUCT_OUT)/obj/PACKAGING/vendor_ramdisk_fragments_intermediates/recovery.cpio.lz4)"; \
 	if [ ! -f "$$RAMDISK_SRC" ]; then \
 		RAMDISK_SRC="$(abspath $(PRODUCT_OUT)/obj/PACKAGING/recovery_intermediates/ramdisk-recovery.cpio)"; \
 	fi; \
 	if [ ! -f "$$RAMDISK_SRC" ]; then \
-		RAMDISK_SRC="$(abspath $(PRODUCT_OUT)/obj/PACKAGING/vendor_ramdisk_fragments_intermediates/recovery.cpio.lz4)"; \
+		RAMDISK_SRC="$(abspath $(PRODUCT_OUT)/ramdisk-recovery.cpio)"; \
 	fi; \
 	if [ ! -f "$$RAMDISK_SRC" ]; then \
-		echo "error: cannot find recovery ramdisk cpio at $$RAMDISK_SRC"; \
+		echo "error: cannot find recovery ramdisk at $$RAMDISK_SRC"; \
 		exit 1; \
 	fi; \
-	echo "Using recovery ramdisk: $$RAMDISK_SRC"; \
+	echo "Using recovery ramdisk: $$RAMDISK_SRC (size: $$(wc -c < "$$RAMDISK_SRC"))"; \
 	rm -rf "$(VENDOR_BOOT_PATCH_DIR)"; \
 	mkdir -p "$(VENDOR_BOOT_PATCH_DIR)"; \
 	cp -f "$(VENDOR_BOOT_STOCK_ABS)" "$(VENDOR_BOOT_PATCH_DIR)/stock.img"; \

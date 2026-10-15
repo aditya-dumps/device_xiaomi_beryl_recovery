@@ -20,36 +20,33 @@ endif
 
 ifdef BUILDING_VENDOR_BOOT_IMAGE
 VENDOR_BOOT_STOCK ?= $(DEVICE_PATH)/prebuilt/vendor_boot.img
-VENDOR_BOOT_PATCH_DIR := $(PRODUCT_OUT)/vendor_boot_patch
+VENDOR_BOOT_PATCH_DIR := $(abspath $(PRODUCT_OUT)/vendor_boot_patch)
+VENDOR_BOOT_STOCK_ABS := $(abspath $(VENDOR_BOOT_STOCK))
+AVBTOOL_BIN := $(abspath $(AVBTOOL))
 
 # Look for magiskboot
 HOST_ARCH_SUFFIX := $(if $(findstring aarch64,$(shell uname -m)),arm64,$(if $(findstring arm,$(shell uname -m)),arm,$(if $(findstring x86_64,$(shell uname -m)),x86_64,x86)))
-MAGISKBOOT := $(wildcard $(DEVICE_PATH)/scripts/magiskboot)
-ifeq ($(MAGISKBOOT),)
-    MAGISKBOOT := $(wildcard $(PWD)/external/magisk-prebuilt/prebuilt/magiskboot_$(HOST_ARCH_SUFFIX))
+MAGISKBOOT_BIN := $(if $(wildcard $(DEVICE_PATH)/scripts/magiskboot),$(abspath $(DEVICE_PATH)/scripts/magiskboot),$(wildcard $(PWD)/external/magisk-prebuilt/prebuilt/magiskboot_$(HOST_ARCH_SUFFIX)))
+ifeq ($(MAGISKBOOT_BIN),)
+    MAGISKBOOT_BIN := $(wildcard $(PWD)/external/magisk-prebuilt/prebuilt/magiskboot_x86_64)
 endif
-ifeq ($(MAGISKBOOT),)
-    MAGISKBOOT := $(wildcard $(PWD)/external/magisk-prebuilt/prebuilt/magiskboot_x86_64)
+ifeq ($(MAGISKBOOT_BIN),)
+    MAGISKBOOT_BIN := magiskboot
 endif
-ifeq ($(MAGISKBOOT),)
-    MAGISKBOOT := magiskboot
-endif
-
-TARGET_RECOVERY_RAMDISK_SRC ?= $(if $(recovery_uncompressed_ramdisk),$(recovery_uncompressed_ramdisk),$(PRODUCT_OUT)/ramdisk-recovery.cpio)
 
 $(INSTALLED_VENDOR_BOOTIMAGE_TARGET): $(recovery_uncompressed_ramdisk) $(VENDOR_BOOT_STOCK) $(AVBTOOL)
 	$(call pretty,"Target vendor_boot image: $@ (patched stock)")
-	@if [ ! -f "$(VENDOR_BOOT_STOCK)" ]; then \
-		echo "error: missing stock vendor_boot at $(VENDOR_BOOT_STOCK)"; \
+	@if [ ! -f "$(VENDOR_BOOT_STOCK_ABS)" ]; then \
+		echo "error: missing stock vendor_boot at $(VENDOR_BOOT_STOCK_ABS)"; \
 		exit 1; \
 	fi
-	@chmod +x "$(MAGISKBOOT)" 2>/dev/null || true
-	@RAMDISK_SRC="$(TARGET_RECOVERY_RAMDISK_SRC)"; \
+	@chmod +x "$(MAGISKBOOT_BIN)" 2>/dev/null || true
+	@RAMDISK_SRC="$(abspath $(PRODUCT_OUT)/ramdisk-recovery.cpio)"; \
 	if [ ! -f "$$RAMDISK_SRC" ]; then \
-		RAMDISK_SRC="$(PRODUCT_OUT)/obj/PACKAGING/recovery_intermediates/ramdisk-recovery.cpio"; \
+		RAMDISK_SRC="$(abspath $(PRODUCT_OUT)/obj/PACKAGING/recovery_intermediates/ramdisk-recovery.cpio)"; \
 	fi; \
 	if [ ! -f "$$RAMDISK_SRC" ]; then \
-		RAMDISK_SRC="$(PRODUCT_OUT)/ramdisk-recovery.cpio"; \
+		RAMDISK_SRC="$(abspath $(PRODUCT_OUT)/obj/PACKAGING/vendor_ramdisk_fragments_intermediates/recovery.cpio.lz4)"; \
 	fi; \
 	if [ ! -f "$$RAMDISK_SRC" ]; then \
 		echo "error: cannot find recovery ramdisk cpio at $$RAMDISK_SRC"; \
@@ -58,23 +55,24 @@ $(INSTALLED_VENDOR_BOOTIMAGE_TARGET): $(recovery_uncompressed_ramdisk) $(VENDOR_
 	echo "Using recovery ramdisk: $$RAMDISK_SRC"; \
 	rm -rf "$(VENDOR_BOOT_PATCH_DIR)"; \
 	mkdir -p "$(VENDOR_BOOT_PATCH_DIR)"; \
-	cp -f "$(VENDOR_BOOT_STOCK)" "$(VENDOR_BOOT_PATCH_DIR)/stock.img"; \
-	cd "$(VENDOR_BOOT_PATCH_DIR)" && "$(MAGISKBOOT)" unpack -n stock.img; \
+	cp -f "$(VENDOR_BOOT_STOCK_ABS)" "$(VENDOR_BOOT_PATCH_DIR)/stock.img"; \
+	(cd "$(VENDOR_BOOT_PATCH_DIR)" && "$(MAGISKBOOT_BIN)" unpack -n stock.img); \
 	if [ -f "$(VENDOR_BOOT_PATCH_DIR)/vendor_ramdisk/recovery.cpio" ]; then \
 		cp -f "$$RAMDISK_SRC" "$(VENDOR_BOOT_PATCH_DIR)/vendor_ramdisk/recovery.cpio"; \
-	else \
+	fi; \
+	if [ -f "$(VENDOR_BOOT_PATCH_DIR)/vendor_ramdisk_recovery.cpio" ]; then \
 		cp -f "$$RAMDISK_SRC" "$(VENDOR_BOOT_PATCH_DIR)/vendor_ramdisk_recovery.cpio"; \
 	fi; \
-	cp -f "$$RAMDISK_SRC" "$(PRODUCT_OUT)/vendor_ramdisk_recovery.cpio"; \
+	cp -f "$$RAMDISK_SRC" "$(abspath $(PRODUCT_OUT))/vendor_ramdisk_recovery.cpio"; \
 	if [ -f "$(VENDOR_BOOT_PATCH_DIR)/bootconfig" ]; then \
 		grep -q "androidboot.selinux=permissive" "$(VENDOR_BOOT_PATCH_DIR)/bootconfig" || \
 		echo "androidboot.selinux=permissive" >> "$(VENDOR_BOOT_PATCH_DIR)/bootconfig"; \
 	fi; \
-	cd "$(VENDOR_BOOT_PATCH_DIR)" && PATCHVBMETAFLAG=true "$(MAGISKBOOT)" repack stock.img new_vendor_boot.img; \
+	(cd "$(VENDOR_BOOT_PATCH_DIR)" && PATCHVBMETAFLAG=true "$(MAGISKBOOT_BIN)" repack stock.img new_vendor_boot.img); \
 	cp -f "$(VENDOR_BOOT_PATCH_DIR)/new_vendor_boot.img" "$@"; \
 	$(call assert-max-image-size,$@,$(BOARD_VENDOR_BOOTIMAGE_PARTITION_SIZE)); \
-	$(AVBTOOL) erase_footer --image $@ >/dev/null 2>&1 || true; \
-	$(AVBTOOL) add_hash_footer \
+	"$(AVBTOOL_BIN)" erase_footer --image $@ >/dev/null 2>&1 || true; \
+	"$(AVBTOOL_BIN)" add_hash_footer \
 		--image $@ \
 		--partition_size $(BOARD_VENDOR_BOOTIMAGE_PARTITION_SIZE) \
 		--partition_name vendor_boot \

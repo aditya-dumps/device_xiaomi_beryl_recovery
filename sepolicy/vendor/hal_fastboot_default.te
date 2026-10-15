@@ -1,0 +1,2 @@
+allow hal_fastboot_default recovery:binder call;
+allow hal_fastboot_default kmsg_device:chr_file write;

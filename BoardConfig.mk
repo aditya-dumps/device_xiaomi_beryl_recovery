@@ -147,6 +147,7 @@ BOARD_USES_VENDOR_DLKMIMAGE := true
 BOARD_USES_ODM_DLKMIMAGE := true
 TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/recovery/root/system/etc/recovery.fstab
 BOARD_RECOVERY_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/recovery
+BOARD_VENDOR_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/vendor
 
 # Properties
 BOARD_CUSTOM_BOOTIMG_MK := $(DEVICE_PATH)/custom_bootimg.mk
@@ -250,3 +251,7 @@ MAINTAINER := IQ_HARRY_07
 TW_DEVICE_VERSION := beryl | IQ_HARRY_07
 
 TW_USE_SERIALNO_PROPERTY_FOR_DEVICE_ID := true
+
+# Touchscreen & Vendor Kernel Modules
+TW_LOAD_VENDOR_MODULES := "fts_touch_i2c.ko lct_tp.ko xiaomi_tp.ko xiaomi_fp.ko adsp.ko nfc_i2c.ko mtk_battery_manager.ko mt6375-battery.ko auth_battery.ko charger_class.ko mtk_charger_framework.ko regulator-vibrator.ko flashlight.ko lm3644.ko"
+TW_LOAD_VENDOR_MODULES_EXCLUDE_GKI := true
